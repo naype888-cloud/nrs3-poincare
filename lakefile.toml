@@ -1,6 +1,9 @@
 name = "NRS3Poincare"
 defaultTargets = ["NRS3Poincare"]
 
+[leanOptions]
+autoImplicit = false
+
 [[require]]
 name = "mathlib"
 git = "https://github.com/leanprover-community/mathlib4.git"
