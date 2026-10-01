@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Poincaré Level Forge</title>
+<meta name="description" content="Smear the levels or add a continuum, and watch the mean energy leave Planck's law. Only sharp levels nε reproduce it.">
+<style>
+  :root { --bg: #fcfcfb; --panel: #fff; --ink: #0b0b0b; --ink2: #52514e; --muted: #8a8985;
+    --grid: #e4e3df; --blue: #2a78d6; --orange: #eb6834; --green: #2f8f5b; --soft: rgba(42,120,214,.12); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #111110; --panel: #191918; --ink: #f2f1ee; --ink2: #c4c3bf; --grid: #2c2b29;
+    --blue: #5b9be6; --orange: #f08a5d; --green: #4fb37d; --soft: rgba(91,155,230,.16); } }
+  :root[data-theme="dark"] { --bg: #111110; --panel: #191918; --ink: #f2f1ee; --ink2: #c4c3bf;
+    --grid: #2c2b29; --blue: #5b9be6; --orange: #f08a5d; --green: #4fb37d; --soft: rgba(91,155,230,.16); }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1080px; margin: 0 auto; padding: 24px 16px 40px; }
+  h1 { font-size: 1.45rem; margin: 0 0 4px; font-weight: 650; }
+  .lead { color: var(--ink2); margin: 0 0 16px; max-width: 800px; }
+  .theme { float: right; font: inherit; font-size: .8rem; padding: 4px 10px; border-radius: 999px;
+    border: 1px solid var(--grid); background: var(--panel); color: var(--ink); cursor: pointer; }
+  .controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px 18px; align-items: center; }
+  @media (max-width: 760px) { .controls { grid-template-columns: 1fr; } }
+  .sl { display: flex; gap: 10px; align-items: center; font-variant-numeric: tabular-nums; }
+  .sl input { flex: 1; min-width: 0; accent-color: var(--blue); } .sl b { min-width: 3em; text-align: right; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+  button { font: inherit; font-size: .88rem; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--grid); background: var(--panel); color: var(--ink); }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 14px; }
+  @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--grid); border-radius: 10px; padding: 12px; }
+  .card h2 { font-size: .95rem; margin: 0 0 6px; font-weight: 600; color: var(--ink2); }
+  .legend { font-size: .8rem; color: var(--ink2); display: flex; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 4px; }
+  .sw { display: inline-block; width: 18px; border-top: 2.5px solid; vertical-align: middle; margin-right: 4px; }
+  canvas { width: 100%; display: block; } #dos { aspect-ratio: 5 / 4; } #plot { aspect-ratio: 16 / 11; }
+  .verdict { margin-top: 12px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--grid);
+    background: var(--panel); font-weight: 600; }
+  .verdict.ok { border-color: var(--blue); color: var(--blue); }
+  .verdict.no { border-color: var(--orange); color: var(--orange); }
+  .readout { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+  @media (max-width: 560px) { .readout { grid-template-columns: 1fr 1fr; } }
+  .stat { background: var(--panel); border: 1px solid var(--grid); border-radius: 8px; padding: 8px 10px; }
+  .stat .k { font-size: .78rem; color: var(--muted); } .stat .v { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+  .note { color: var(--ink2); font-size: .9rem; margin-top: 14px; max-width: 860px; }
+  code { font-size: .88em; } a { color: var(--blue); }
+</style>
+</head>
+<body>
+<main>
+  <button class="theme" id="theme" type="button" aria-label="Toggle dark mode">Theme</button>
+  <h1>Only sharp levels give Planck's law</h1>
+  <p class="lead">Build a density of states: sharp levels at <code>nε</code>, smeared by σ, plus a continuous part
+    of weight α. The mean energy at temperature <code>1/β</code> is computed exactly from the Laplace transform.
+    Poincaré proved in 1912, and Lean checks, that Planck's <code>ε/(e<sup>βε</sup> − 1)</code> at every temperature
+    forces <code>σ = 0</code>, <code>α = 0</code>.</p>
+
+  <div class="controls">
+    <label class="sl">smearing σ/ε<input id="s" type="range" min="0" max="0.5" step="0.005" value="0.15"><b id="vs">0.15</b></label>
+    <label class="sl">continuum α<input id="a" type="range" min="0" max="1" step="0.01" value="0"><b id="va">0.00</b></label>
+    <label class="sl">βε = ε/kT<input id="b" type="range" min="0.05" max="8" step="0.01" value="2"><b id="vb">2.00</b></label>
+  </div>
+  <div class="chips">
+    <button type="button" data-p="0,0">Planck: sharp levels</button>
+    <button type="button" data-p="0.15,0">smeared levels</button>
+    <button type="button" data-p="0,1">classical continuum</button>
+    <button type="button" data-p="0.08,0.3">a bit of everything</button>
+  </div>
+
+  <div class="grid">
+    <div class="card"><h2>The density of states w(E)</h2><canvas id="dos" aria-label="Density of states"></canvas></div>
+    <div class="card"><h2>Mean energy × β against βε</h2>
+      <div class="legend"><span><span class="sw" style="border-color:var(--blue)"></span>yours</span>
+        <span><span class="sw" style="border-color:var(--orange);border-top-style:dashed"></span>Planck</span>
+        <span><span class="sw" style="border-color:var(--muted)"></span>classical 1/β</span></div>
+      <canvas id="plot" aria-label="Mean energy against temperature"></canvas></div>
+  </div>
+
+  <div class="readout" aria-live="polite">
+    <div class="stat"><div class="k">your βU at this βε</div><div class="v" id="ru">–</div></div>
+    <div class="stat"><div class="k">Planck βU</div><div class="v" id="rp">–</div></div>
+    <div class="stat"><div class="k">|U/U<sub>Planck</sub> − 1| at this βε</div><div class="v" id="rd">–</div></div>
+  </div>
+  <div class="verdict" id="verdict" aria-live="polite"></div>
+
+  <p class="note">Exact formulas (ε = 1): smeared levels <code>Z = e<sup>β²σ²/2</sup>/(1 − e<sup>−β</sup>)</code>,
+    <code>U = 1/(e<sup>β</sup> − 1) − βσ²</code>; continuum <code>Z = 1/β</code>, <code>U = 1/β</code>; mixtures add the
+    Z's. Gaussian tails reach below E = 0, so the mean can turn negative when cold; the theorem allows any real energies. Lean (<a href="https://github.com/naype888-cloud/nrs3-poincare">nrs3-poincare</a>):
+    <code>Poincare1912.planck_forces_levels</code> (Planck's mean energy at every β forces <code>c · ∑ δ<sub>nε</sub></code>),
+    <code>no_density_planck</code> (no density reproduces it), <code>eq_of_laplace</code> (the Laplace transform on β > 0
+    determines the weight), <code>Poincare1911.planck_lt_rayleigh_jeans</code>.</p>
+</main>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  let sig = 0.15, al = 0, be = 2;
+  const planck = (x) => x / Math.expm1(x);
+  function betaU(x) {   // β·U for the current weight at β = x (ε = 1)
+    const Zc = Math.exp(x * x * sig * sig / 2) / (-Math.expm1(-x)), Uc = 1 / Math.expm1(x) - x * sig * sig;
+    const Zf = 1 / x, Uf = 1 / x;
+    const Z = (1 - al) * Zc + al * Zf;
+    return x * ((1 - al) * Zc * Uc + al * Zf * Uf) / Z;
+  }
+  function setup(c) {
+    const r = c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr);
+    const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); return [g, r.width, r.height];
+  }
+  function drawDos() {
+    const [g, w, h] = setup($("dos")), L = 14, R = 10, T = 16, B = 30, W = w - L - R, H = h - T - B;
+    const EM = 6.4, X = (e) => L + (e + 0.4) / EM * W, Y = (y) => T + (1 - y / 1.15) * H;
+    g.strokeStyle = css("--grid"); g.lineWidth = 1; g.beginPath(); g.moveTo(L, Y(0)); g.lineTo(L + W, Y(0)); g.stroke();
+    g.fillStyle = css("--muted"); g.font = "12px system-ui, sans-serif";
+    for (let n = 0; n <= 5; n++) g.fillText(`${n}ε`, X(n) - 6, Y(0) + 18);
+    // continuum
+    if (al > 0) { g.fillStyle = css("--orange"); g.globalAlpha = .25;
+      g.fillRect(X(0), Y(al * 0.5), X(6) - X(0), Y(0) - Y(al * 0.5)); g.globalAlpha = 1; }
+    // levels
+    const amp = 1 - al;
+    if (sig < 0.004) {
+      g.strokeStyle = css("--blue"); g.fillStyle = css("--blue"); g.lineWidth = 3;
+      for (let n = 0; n <= 5; n++) { g.beginPath(); g.moveTo(X(n), Y(0)); g.lineTo(X(n), Y(amp)); g.stroke();
+        if (amp > 0) { g.beginPath(); g.moveTo(X(n), Y(amp) - 6); g.lineTo(X(n) - 5, Y(amp) + 4); g.lineTo(X(n) + 5, Y(amp) + 4); g.closePath(); g.fill(); } }
+    } else {
+      g.strokeStyle = css("--blue"); g.lineWidth = 2; g.fillStyle = css("--soft"); g.beginPath();
+      const pk = 0.09 / sig;
+      for (let i = 0; i <= 700; i++) { const e = -0.4 + i / 700 * EM; let v = 0;
+        for (let n = 0; n <= 6; n++) v += Math.exp(-0.5 * ((e - n) / sig) ** 2);
+        const y = Math.min(1.12, amp * v * Math.min(1, pk)); (i ? g.lineTo : g.moveTo).call(g, X(e), Y(y)); }
+      g.stroke();
+    }
+    g.fillStyle = css("--ink2"); g.fillText(sig < 0.004 && al === 0 ? "sharp levels c · ∑ δ(E − nε)" : "your weight", L + 4, T + 4);
+  }
+  function drawPlot() {
+    const [g, w, h] = setup($("plot")), L = 40, R = 10, T = 10, B = 30, W = w - L - R, H = h - T - B, XM = 8;
+    const YL = -0.5, X = (x) => L + x / XM * W, Y = (y) => T + (1.15 - y) / (1.15 - YL) * H;
+    g.strokeStyle = css("--grid"); g.fillStyle = css("--muted"); g.font = "12px system-ui, sans-serif"; g.lineWidth = 1;
+    for (let y = -0.5; y <= 1.001; y += .25) { g.beginPath(); g.moveTo(L, Y(y)); g.lineTo(L + W, Y(y)); g.stroke(); g.fillText(y.toFixed(2), 2, Y(y) + 4); }
+    g.strokeStyle = css("--ink2"); g.beginPath(); g.moveTo(L, Y(0)); g.lineTo(L + W, Y(0)); g.stroke(); g.strokeStyle = css("--grid");
+    for (let x = 0; x <= 8; x += 2) { g.beginPath(); g.moveTo(X(x), T); g.lineTo(X(x), T + H); g.stroke(); g.fillText(x, X(x) - 3, T + H + 18); }
+    g.strokeStyle = css("--muted"); g.lineWidth = 1.6; g.beginPath(); g.moveTo(X(0), Y(1)); g.lineTo(X(XM), Y(1)); g.stroke();
+    const curve = (f, c, lw, dash) => { g.strokeStyle = c; g.lineWidth = lw; g.setLineDash(dash); g.beginPath();
+      for (let i = 1; i <= 500; i++) { const x = i / 500 * XM, y = Math.max(YL, Math.min(1.15, f(x))); (i > 1 ? g.lineTo : g.moveTo).call(g, X(x), Y(y)); }
+      g.stroke(); g.setLineDash([]); };
+    // the gap between yours and Planck
+    g.fillStyle = css("--soft"); g.beginPath();
+    for (let i = 1; i <= 500; i++) { const x = i / 500 * XM; (i > 1 ? g.lineTo : g.moveTo).call(g, X(x), Y(Math.max(YL, Math.min(1.15, betaU(x))))); }
+    for (let i = 500; i >= 1; i--) { const x = i / 500 * XM; g.lineTo(X(x), Y(planck(x))); }
+    g.closePath(); g.fill();
+    curve(planck, css("--orange"), 2.2, [7, 5]); curve(betaU, css("--blue"), 2.4, []);
+    g.strokeStyle = css("--ink2"); g.lineWidth = 1; g.beginPath(); g.moveTo(X(be), T); g.lineTo(X(be), T + H); g.stroke();
+    g.fillStyle = css("--blue"); g.beginPath(); g.arc(X(be), Y(Math.max(YL, Math.min(1.15, betaU(be)))), 5, 0, 2 * Math.PI); g.fill();
+    g.fillStyle = css("--muted"); g.fillText("βε  (cold →)", L + W - 70, T + H + 18);
+  }
+  function update() {
+    drawDos(); drawPlot();
+    $("vs").textContent = sig.toFixed(2); $("va").textContent = al.toFixed(2); $("vb").textContent = be.toFixed(2);
+    $("ru").textContent = betaU(be).toFixed(4); $("rp").textContent = planck(be).toFixed(4);
+    let dev = 0; for (let i = 1; i <= 400; i++) { const x = 0.02 * i; dev = Math.max(dev, Math.abs(betaU(x) / planck(x) - 1)); }
+    const here = Math.abs(betaU(be) / planck(be) - 1);
+    $("rd").textContent = here < 1e-12 ? "0" : here.toPrecision(3);
+    const v = $("verdict");
+    if (dev < 1e-9) { v.className = "verdict ok"; v.textContent = "✓ Planck's law at every temperature: these are sharp levels c · ∑ δ(E − nε), as Poincaré's theorem demands."; }
+    else { v.className = "verdict no"; v.textContent = "✗ Misses Planck's law" + (sig > 0 ? " — smeared levels" : "") + (al > 0 ? (sig > 0 ? " and" : " —") + " a continuous part" : "") + ": any σ > 0 or α > 0 breaks it somewhere."; }
+  }
+  $("s").addEventListener("input", (e) => { sig = +e.target.value; update(); });
+  $("a").addEventListener("input", (e) => { al = +e.target.value; update(); });
+  $("b").addEventListener("input", (e) => { be = +e.target.value; update(); });
+  document.querySelectorAll("[data-p]").forEach((b) => b.addEventListener("click", () => {
+    [sig, al] = b.dataset.p.split(",").map(Number); $("s").value = sig; $("a").value = al; update(); }));
+  $("theme").addEventListener("click", () => { const r = document.documentElement, dk = matchMedia("(prefers-color-scheme: dark)").matches;
+    r.dataset.theme = (r.dataset.theme || (dk ? "dark" : "light")) === "dark" ? "light" : "dark"; update(); });
+  window.addEventListener("resize", update);
+  update();
+})();
+</script>
+</body>
+</html>
