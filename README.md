@@ -47,11 +47,11 @@ Every file: no `sorry`, lines of at most 100 characters, English headers.
 ## The mosaic
 
 - [NRS and NRS³ — the base theorem](https://github.com/naype888-cloud/nava-robertson-schrodinger)
-- [NRS³ · Cramér–Rao](https://github.com/naype888-cloud/nrs3-cramer-rao)
-- [NRS³ · Mandelstam–Tamm](https://github.com/naype888-cloud/nrs3-mandelstam-tamm)
+- [NRS³ · Mandelstam–Tamm and Cramér–Rao](https://github.com/naype888-cloud/nrs3-mandelstam-tamm-cramer-rao)
 - [NRS³ · Penrose](https://github.com/naype888-cloud/nrs3-penrose)
 - [NRS³ · Pauli–Dirac](https://github.com/naype888-cloud/nrs3-pauli-dirac)
 - **[NRS³ · Poincaré](https://github.com/naype888-cloud/nrs3-poincare)** (this one)
+- [NRS³ · Defect and curvature](https://github.com/naype888-cloud/nrs3-defect-curvature)
 
 ## License
 
