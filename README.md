@@ -3,6 +3,8 @@
 **Planck's law forces discrete energy levels** — Poincaré's 1912 theorem in full: any density of
 states with Planck's mean energy is `c · ∑ δ_{nε}`. Lean 4.
 
+**[▶ Try it: smear the levels and watch Planck's law break](https://naype888-cloud.github.io/nrs3-poincare/)**
+
 ![NRS³ · Poincaré](docs/figures/poincare1912_discreteness.png)
 
 ## Results
